@@ -12,7 +12,7 @@ GOLANGCI_VERSION := v1.50.0
 
 .PHONY: build
 build: ## Build the project binaries
-	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build $(BUILDFLAGS) -o bin/olm-addon-controller
+	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build $(BUILDFLAGS) -o bin ./cmd/hub/...
 
 .PHONY: docker-build
 docker-build: ## Build docker image
@@ -22,7 +22,7 @@ docker-build: ## Build docker image
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
-.PHONY: deploy 
+.PHONY: deploy
 deploy:
 	kubectl apply -k deploy
 

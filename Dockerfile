@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 
-# Build the addon controller binary
+# Build the addon manager binary
 FROM --platform=${BUILDPLATFORM} golang:1.19 AS builder
 WORKDIR /workspace
 
@@ -21,16 +21,15 @@ RUN --mount=type=cache,target=/go/pkg/mod,z \
     go mod download
 
 # Copy the source
-COPY main.go .
-COPY agent/ agent/
-COPY manifests/ manifests/
+COPY cmd/ cmd/
+COPY pkg/ pkg/
 
 # Build
 # We don't vendor modules. Enforce that behavior
 ENV GOFLAGS=-mod=readonly
 RUN --mount=type=cache,target=/root/.cache/go-build,z \
     --mount=type=cache,target=/go/pkg/mod,z \
-    CGO_ENABLED=0 go build -a -o olm-addon-controller 
+    CGO_ENABLED=0 go build -a -o olm-addon-controller ./cmd/hub/...
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details

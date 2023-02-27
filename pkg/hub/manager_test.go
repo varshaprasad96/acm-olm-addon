@@ -1,4 +1,4 @@
-package agent
+package hub
 
 import (
 	"embed"

@@ -10,8 +10,7 @@ import (
 
 	"open-cluster-management.io/addon-framework/pkg/addonmanager"
 	addonv1alpha1client "open-cluster-management.io/api/client/addon/clientset/versioned"
-
-	"open-cluster-management.io/olm-addon/agent"
+	"open-cluster-management.io/olm-addon/pkg/hub"
 )
 
 const (
@@ -39,7 +38,7 @@ func main() {
 		klog.ErrorS(err, "unable to setup addon manager")
 		os.Exit(1)
 	}
-	err = addonMgr.AddAgent(&agent.OLMAgent{
+	err = addonMgr.AddAgent(&hub.OLMAgentManager{
 		AddonClient:  addonClient,
 		AddonName:    addonName,
 		OLMManifests: FS,

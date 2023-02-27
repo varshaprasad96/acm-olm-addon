@@ -1,4 +1,4 @@
-package agent
+package hub
 
 import (
 	"bufio"
@@ -30,13 +30,13 @@ const (
 var manifestFiles = [3]string{"manifests/crds.yaml", "manifests/permissions.yaml", "manifests/olm.yaml"}
 
 // Another agent with registration enabled.
-type OLMAgent struct {
+type OLMAgentManager struct {
 	AddonClient  addonv1alpha1client.Interface
 	AddonName    string
 	OLMManifests embed.FS
 }
 
-func (o *OLMAgent) Manifests(cluster *clusterv1.ManagedCluster,
+func (o *OLMAgentManager) Manifests(cluster *clusterv1.ManagedCluster,
 	addon *addonapiv1alpha1.ManagedClusterAddOn) ([]runtime.Object, error) {
 	if !clusterSupportsAddonInstall(cluster) {
 		klog.InfoS("Cluster may be OpenShift, not deploying olm addon. Please label the cluster with a \"vendor\" value different from \"OpenShift\" otherwise.", "addonName",
@@ -56,7 +56,7 @@ func (o *OLMAgent) Manifests(cluster *clusterv1.ManagedCluster,
 	return objects, nil
 }
 
-func (o *OLMAgent) GetAgentAddonOptions() agentfw.AgentAddonOptions {
+func (o *OLMAgentManager) GetAgentAddonOptions() agentfw.AgentAddonOptions {
 	return agentfw.AgentAddonOptions{
 		AddonName: o.AddonName,
 		//InstallStrategy: agentfw.InstallAllStrategy(operatorSuggestedNamespace),
