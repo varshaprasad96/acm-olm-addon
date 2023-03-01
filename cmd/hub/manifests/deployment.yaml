@@ -1,0 +1,81 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .AddonName }}
+  namespace: open-cluster-management-agent-addon
+  labels:
+    app: {{ .AddonName }}
+spec:
+  strategy:
+    type: RollingUpdate
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .AddonName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .AddonName }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: default
+      containers:
+        #  kube-rbac-proxy may be added for metrics later on
+        - name: {{ .AddonName }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ "ALL" ]
+            privileged: false
+          command:
+          # to be changed to the purpose built agent
+          - /bin/olm
+          image: quay.io/operator-framework/olm@sha256:3cfc40fa4b779fe1d9817dc454a6d70135e84feba1ffc468c4e434de75bb2ac5
+          imagePullPolicy: IfNotPresent
+          # ports:
+          #   - containerPort: 8080
+          #     name: metrics
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+          terminationMessagePolicy: FallbackToLogsOnError
+          env:
+          - name: AGENT_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: AGENT_NAME
+            value: olm-operator
+          resources:
+            requests:
+              cpu: 10m
+              memory: 160Mi
+{{- if .NodeSelector }}
+      nodeSelector:
+      {{- range $key, $value := .NodeSelector }}
+        "{{ $key }}": "{{ $value }}"
+      {{- end }}
+{{- end }}
+{{- if .Tolerations }}
+      tolerations:
+      {{- range $toleration := .Tolerations }}
+      - key: "{{ $toleration.Key }}"
+        value: "{{ $toleration.Value }}"
+        effect: "{{ $toleration.Effect }}"
+        operator: "{{ $toleration.Operator }}"
+        {{- if $toleration.TolerationSeconds }}
+        tolerationSeconds: {{ $toleration.TolerationSeconds }}
+        {{- end }}
+      {{- end }}
+{{- end }}

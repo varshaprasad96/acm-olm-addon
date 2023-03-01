@@ -7,6 +7,7 @@ resources:
 - service_account.yaml
 - olm_clustermanagementaddon.yaml
 - olm_addon_controller.yaml
+- olm_addondeploymentconfig.yaml
 
 images:
   - name: quay.io/fgiloux/olm-addon-controller
