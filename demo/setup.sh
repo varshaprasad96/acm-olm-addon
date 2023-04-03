@@ -23,15 +23,17 @@ while getopts ":a:p:t:" opt; do
    esac
 done
 
+# this can be done on mac with `kern.maxfiles=` but is not required.
 echo " It is recommended to increase OS file watches before running the demo, e.g.:"
-echo " $ sudo sysctl -w fs.inotify.max_user_watches=2097152"
-echo " $ sudo sysctl -w fs.inotify.max_user_instances=256"
+# echo " $ sudo sysctl -w fs.inotify.max_user_watches=2097152"
+# echo " $ sudo sysctl -w fs.inotify.max_user_instances=256"
 
 IP=${IP:-192.168.130.1}
 HTTP_PORT=${HTTP_PORT:-8080}
 TLS_PORT=${TLS_PORT:-8443}
 
 RUN_DIR=${DEMO_DIR}/.demo
+REGISTRATION_OPERATOR=/Users/varshaprasadnarsing/go/src/github.com/varshaprasad96/registration-operator
 mkdir -p ${RUN_DIR}
 
 wait_command() {
@@ -61,18 +63,20 @@ echo "Creating kind clusters"
 kind create cluster --name hub --kubeconfig ${RUN_DIR}/hub.kubeconfig --config ${RUN_DIR}/hub.cfg
 kind create cluster --name spoke1 --kubeconfig ${RUN_DIR}/spoke1.kubeconfig --config ${RUN_DIR}/spoke1.cfg
 kind create cluster --name spoke2 --kubeconfig ${RUN_DIR}/spoke2.kubeconfig --config ${RUN_DIR}/spoke2.cfg
+echo "clusters deployed successfully"
 
 echo "Deploying OCM registration operator"
 pushd ${RUN_DIR}
-if [ ! -d "registration-operator" ];
-then
-  git clone git@github.com:open-cluster-management-io/registration-operator.git
-fi
-pushd registration-operator
-# export IMAGE_TAG=v0.10.0
-KUBECONFIG=${RUN_DIR}/hub.kubeconfig make deploy-hub
-KUBECONFIG=${RUN_DIR}/spoke1.kubeconfig  MANAGED_CLUSTER_NAME=spoke1 make deploy-spoke
-KUBECONFIG=${RUN_DIR}/spoke2.kubeconfig  MANAGED_CLUSTER_NAME=spoke2 make deploy-spoke
+
+pushd ${REGISTRATION_OPERATOR}
+echo "deploying hub and spoke clusters"
+export IMAGE_TAG=v0.10.0
+KUBECONFIG=${RUN_DIR}/hub.cfg make deploy-hub
+KUBECONFIG=${RUN_DIR}/spoke1.cfg  MANAGED_CLUSTER_NAME=spoke1 make deploy-spoke
+KUBECONFIG=${RUN_DIR}/spoke2.cfg  MANAGED_CLUSTER_NAME=spoke2 make deploy-spoke
+
+echo "OCM deployed successfully"
+
 popd
 popd
 
