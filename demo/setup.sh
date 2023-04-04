@@ -23,17 +23,17 @@ while getopts ":a:p:t:" opt; do
    esac
 done
 
-# this can be done on mac with `kern.maxfiles=` but is not required.
 echo " It is recommended to increase OS file watches before running the demo, e.g.:"
-# echo " $ sudo sysctl -w fs.inotify.max_user_watches=2097152"
-# echo " $ sudo sysctl -w fs.inotify.max_user_instances=256"
+echo " $ sudo sysctl -w fs.inotify.max_user_watches=2097152"
+echo " $ sudo sysctl -w fs.inotify.max_user_instances=256"
 
-IP=${IP:-192.168.130.1}
+echo "The path to registration operator directory is: $1"
+
+IP=$(ipconfig getifaddr en0)
 HTTP_PORT=${HTTP_PORT:-8080}
 TLS_PORT=${TLS_PORT:-8443}
 
 RUN_DIR=${DEMO_DIR}/.demo
-REGISTRATION_OPERATOR=/Users/varshaprasadnarsing/go/src/github.com/varshaprasad96/registration-operator
 mkdir -p ${RUN_DIR}
 
 wait_command() {
@@ -63,20 +63,25 @@ echo "Creating kind clusters"
 kind create cluster --name hub --kubeconfig ${RUN_DIR}/hub.kubeconfig --config ${RUN_DIR}/hub.cfg
 kind create cluster --name spoke1 --kubeconfig ${RUN_DIR}/spoke1.kubeconfig --config ${RUN_DIR}/spoke1.cfg
 kind create cluster --name spoke2 --kubeconfig ${RUN_DIR}/spoke2.kubeconfig --config ${RUN_DIR}/spoke2.cfg
-echo "clusters deployed successfully"
+
+echo "Created kind clusters"
 
 echo "Deploying OCM registration operator"
 pushd ${RUN_DIR}
 
-pushd ${REGISTRATION_OPERATOR}
-echo "deploying hub and spoke clusters"
-export IMAGE_TAG=v0.10.0
-KUBECONFIG=${RUN_DIR}/hub.cfg make deploy-hub
-KUBECONFIG=${RUN_DIR}/spoke1.cfg  MANAGED_CLUSTER_NAME=spoke1 make deploy-spoke
-KUBECONFIG=${RUN_DIR}/spoke2.cfg  MANAGED_CLUSTER_NAME=spoke2 make deploy-spoke
+if [ -z "$1" ]; then
+  git clone git@github.com:open-cluster-management-io/registration-operator.git
+  registrationOperatorPath=registration-operator
+else
+  registrationOperatorPath=$1
+fi
+echo $registrationOperatorPath
 
-echo "OCM deployed successfully"
-
+pushd $registrationOperatorPath
+# export IMAGE_TAG=v0.10.0
+KUBECONFIG=${RUN_DIR}/hub.kubeconfig make deploy-hub
+KUBECONFIG=${RUN_DIR}/spoke1.kubeconfig  MANAGED_CLUSTER_NAME=spoke1 make deploy-spoke
+KUBECONFIG=${RUN_DIR}/spoke2.kubeconfig  MANAGED_CLUSTER_NAME=spoke2 make deploy-spoke
 popd
 popd
 
@@ -98,3 +103,4 @@ caBundle2=$(KUBECONFIG=${RUN_DIR}/hub.kubeconfig kubectl get managedclusters spo
 url2=$(KUBECONFIG=${RUN_DIR}/spoke2.kubeconfig kubectl config view -o jsonpath='{.clusters[].cluster.server}')
 KUBECONFIG=${RUN_DIR}/hub.kubeconfig kubectl patch managedclusters spoke2 --type='merge' -p "{\"spec\":{\"managedClusterClientConfigs\": [{\"caBundle\":\"${caBundle2}\", \"url\":\"${url2}\"}]}}"
 
+echo "done"
